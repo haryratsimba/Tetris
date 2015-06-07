@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Tetris</title>
+	<style>
+		#board .col {
+			width: 13px;
+			height: 21px;
+			display: inline-block;
+			text-align: center;
+		}
+	</style>
+</head>
+<body>
+	<div id="board"></div>
+	<button id="stop">Stop</button>
+	<script>
+		function Game() {
+			this.lines = [this.randomBlock(), 0, 0, 0, 0]; // x5 lines
+			this.columns = 7; // x5 columns
+			this.currentLine = 0; // Current y line
+		}
+		
+		Game.prototype.randomBlock = function() {
+			// TODO : Generate unit block (pow of 2)
+			return 8;
+		};
+
+		Game.prototype.start = function() {
+			var self = this;
+			this.session = setInterval(function() {
+				self.doGame();
+			}, 700);
+			this.doGame();
+		};
+
+		Game.prototype.stop = function() {
+			clearInterval(this.session);
+		};
+
+		Game.prototype.doGame = function() {
+			this.refreshBoard();
+
+			var currentLine = this.currentLine++,
+				nextBlock = this.lines[currentLine + 1];
+
+			if(nextBlock != undefined) {
+				this.lines[currentLine + 1] |= this.lines[currentLine]; // Merge currentBlockPos with the next line
+				this.lines[currentLine] &= nextBlock; // Substract prevBlockPos from current line
+			} else {
+				if(currentLine > 0) {
+					this.lines[this.currentLine = 0] = this.randomBlock();
+				} else {
+					this.stop(); // Game over
+					console.log('over');
+					// TODO : game.reset();
+				}
+			}
+		};
+
+		Game.prototype.moveTo = function(direction) {
+			var currentLine = this.currentLine,
+				nextLine = currentLine + 1;
+
+			// Combo blocks are not pow of 2
+			// http://myprogrammingblog.com/2013/08/20/how-to-find-if-a-number-is-power-2-bitwise-and-iterative-python-script/
+			var isComboBlock = (this.lines[currentLine] & this.lines[currentLine] - 1) != 0;
+			// If current line contains multiple blocks
+			if(isComboBlock && (this.lines[nextLine] == undefined || this.lines[nextLine] === 0)) {
+				return;
+			}
+
+			this.lines[currentLine] = direction;
+		};
+
+		Game.prototype.right = function() {
+			var currentLine = this.currentLine,
+				nextLine = currentLine + 1,
+				// Bit in difference between current and next line
+				pivotBit = this.lines[currentLine] - (this.lines[nextLine] & this.lines[currentLine]);
+
+			// Move only the bit in difference between current and next line
+			if(((pivotBit >> 1) & this.lines[currentLine]) === 0) {
+				this.moveTo(this.lines[currentLine] - (pivotBit >> 1));
+			}
+		};
+
+		Game.prototype.left = function() {
+			var currentLine = this.currentLine,
+				nextLine = currentLine + 1,
+				// Bit in difference between current and next line
+				pivotBit = this.lines[currentLine] - (this.lines[nextLine] & this.lines[currentLine]);
+
+			// Move only the bit in difference between current and next line
+			if(((pivotBit << 1) & this.lines[currentLine]) === 0 && pivotBit < Math.pow(2, this.columns - 1)) {
+				this.moveTo(this.lines[currentLine] + pivotBit);
+			}
+		};
+
+		Game.prototype.refreshBoard = function() {
+			var $board = document.getElementById('board'),
+				boardContent = [];
+			
+			for(var i = 0 ; i < this.lines.length ; i++) {
+				var line = this.lines[i];
+				for(var j = this.columns - 1 ; j >= 0 ; j--) {
+					boardContent.push('<span class="col">');
+					boardContent.push((line & Math.pow(2, j)) > 0 ? '&blk12;' : '.');
+					boardContent.push('</span>');
+				}
+				boardContent.push('<br>');
+			}
+			
+			$board.innerHTML = boardContent.join('');
+		};
+
+		// TODO : Add reset method
+
+		document.getElementById('stop').addEventListener('click', function(e) {
+			e.preventDefault();
+			game.stop();
+		});
+
+		document.body.addEventListener('keydown', function(e) {
+			switch(e.keyCode) {
+				case 37:
+					game.left();
+					// game.refreshBoard();
+					break;
+				case 39:
+					game.right();
+					// game.refreshBoard();
+					break;
+			}
+		});
+		
+		var game = new Game();
+		game.start();
+	</script>
+</body>
+</html>
