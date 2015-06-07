@@ -3,26 +3,36 @@
 <head>
 	<title>Tetris</title>
 	<style>
+		body {
+			background-color: #FAD46B;
+
+		}
+		#board {
+			margin: 0 auto;
+			heigth: 340px;
+			width: 280px;
+			text-align: center;
+			font-size: 57px;
+		}
 		#board .col {
-			width: 13px;
-			height: 21px;
+			width: 41px;
+			height: 68px;
 			display: inline-block;
 			text-align: center;
 		}
 	</style>
 </head>
 <body>
-	<div id="board"></div>
-	<button id="stop">Stop</button>
+	<div id="board">
+		<div id="canvas"></div>
+		<button id="replay">Replay</button>
+	</div>
 	<script>
 		function Game() {
-			this.lines = [this.randomBlock(), 0, 0, 0, 0]; // x5 lines
-			this.columns = 7; // x5 columns
-			this.currentLine = 0; // Current y line
+			this.init();
 		}
 		
 		Game.prototype.randomBlock = function() {
-			// TODO : Generate unit block (pow of 2)
 			return 8;
 		};
 
@@ -38,23 +48,34 @@
 			clearInterval(this.session);
 		};
 
+		// TODO : Add reset method
+		Game.prototype.init = function() {
+			this.columns = 6; // x7 columns
+			this.lines = [this.randomBlock(), 0, 0, 0, 0]; // x5 lines
+			this.currentLine = 0; // Current y line
+		};
+
 		Game.prototype.doGame = function() {
 			this.refreshBoard();
 
 			var currentLine = this.currentLine++,
 				nextBlock = this.lines[currentLine + 1];
 
+			if(currentLine === 0 && (this.lines[currentLine] & nextBlock) > 0) {
+				this.stop(); // Game over
+				console.log('over');
+			}
+
 			if(nextBlock != undefined) {
 				this.lines[currentLine + 1] |= this.lines[currentLine]; // Merge currentBlockPos with the next line
 				this.lines[currentLine] &= nextBlock; // Substract prevBlockPos from current line
 			} else {
-				if(currentLine > 0) {
-					this.lines[this.currentLine = 0] = this.randomBlock();
-				} else {
-					this.stop(); // Game over
-					console.log('over');
-					// TODO : game.reset();
+				// if the last line is full then remove the line
+				if(this.lines[currentLine] === (Math.pow(2, this.columns) - 1)) {
+					this.lines.pop();
+					this.lines.unshift(0);
 				}
+				this.lines[this.currentLine = 0] = this.randomBlock();
 			}
 		};
 
@@ -98,38 +119,35 @@
 		};
 
 		Game.prototype.refreshBoard = function() {
-			var $board = document.getElementById('board'),
-				boardContent = [];
+			var $canvas = document.getElementById('canvas'),
+				canvasContent = [];
 			
 			for(var i = 0 ; i < this.lines.length ; i++) {
 				var line = this.lines[i];
 				for(var j = this.columns - 1 ; j >= 0 ; j--) {
-					boardContent.push('<span class="col">');
-					boardContent.push((line & Math.pow(2, j)) > 0 ? '&blk12;' : '.');
-					boardContent.push('</span>');
+					canvasContent.push('<span class="col">');
+					canvasContent.push((line & Math.pow(2, j)) > 0 ? '#' : '.');
+					canvasContent.push('</span>');
 				}
-				boardContent.push('<br>');
+				canvasContent.push('<br>');
 			}
 			
-			$board.innerHTML = boardContent.join('');
+			$canvas.innerHTML = canvasContent.join('');
 		};
 
-		// TODO : Add reset method
-
-		document.getElementById('stop').addEventListener('click', function(e) {
+		document.getElementById('replay').addEventListener('click', function(e) {
 			e.preventDefault();
-			game.stop();
+			game.init();
+			game.start();
 		});
 
 		document.body.addEventListener('keydown', function(e) {
 			switch(e.keyCode) {
 				case 37:
 					game.left();
-					// game.refreshBoard();
 					break;
 				case 39:
 					game.right();
-					// game.refreshBoard();
 					break;
 			}
 		});
